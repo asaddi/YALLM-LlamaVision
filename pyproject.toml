@@ -1,7 +1,7 @@
 [project]
 name = "yallm-llamavision"
 description = "A set of nodes for basic Llama 3.2 Vision support in ComfyUI. Give it an image and query and it will output a text response."
-version = "0.0.0"
+version = "0.1.0"
 license = {file = "LICENSE.txt"}
 dependencies = [
   "transformers>=4.45.0",
@@ -18,7 +18,7 @@ DisplayName = "YALLM-LlamaVision"
 Icon = ""
 
 [tool.bumpversion]
-current_version = "0.0.0"
+current_version = "0.1.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
