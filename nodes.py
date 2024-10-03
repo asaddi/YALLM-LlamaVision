@@ -14,7 +14,7 @@ import yaml
 
 # Not sure how to turn accelerate off, so can't do manual management like the rest of ComfyUI
 # from comfy.model_management import get_torch_device, unet_offload_device
-from folder_paths import models_dir
+import folder_paths
 
 
 BASE_NAME = os.path.realpath(os.path.dirname(__file__))
@@ -70,8 +70,8 @@ class LlamaVisionModels:
             # Easy peasy
             return snapshot_download(model_def.repo_id, allow_patterns=allowed)
         else:
-            dir_name = '--'.join(model_def.repo_id.split('/', 2))
-            model_path = os.path.join(models_dir, 'LLM', dir_name)
+            dir_name = '--'.join(model_def.repo_id.split('/'))
+            model_path = os.path.join(folder_paths.models_dir, 'LLM', dir_name)
             os.makedirs(model_path, exist_ok=True)
             return snapshot_download(model_def.repo_id, allow_patterns=allowed, local_dir=model_path)
 
