@@ -1,0 +1,42 @@
+[project]
+name = "yallm-llamavision"
+description = "A set of nodes for basic Llama 3.2 Vision support in ComfyUI. Give it an image and query and it will output a text response."
+version = "0.0.0"
+license = {file = "LICENSE.txt"}
+dependencies = [
+  "transformers>=4.45.0",
+  "bitsandbytes"
+]
+
+[project.urls]
+Repository = "https://github.com/asaddi/YALLM-LlamaVision"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "asaddi"
+DisplayName = "YALLM-LlamaVision"
+Icon = ""
+
+[tool.bumpversion]
+current_version = "0.0.0"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+ignore_missing_files = false
+tag = true
+sign_tags = true
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+allow_dirty = false
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+commit_args = "-S"
+setup_hooks = []
+pre_commit_hooks = []
+post_commit_hooks = []
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"

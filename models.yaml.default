@@ -1,24 +1,32 @@
 models:
-    # The name as it appears in the UI
-  - name: meta-llama/Llama-3.2-11B-Vision-Instruct
-    # The HF model ID. OR! Can be a path to a local directory.
-    # If a local directory, it should contain the usual JSON & safetensors
-    # files, i.e. from using "huggingface-cli download"
-    repo_id: meta-llama/Llama-3.2-11B-Vision-Instruct
-    # If false, it will download to ComfyUI/models/LLM.
-    # Otherwise, it will end up in your usual HF cache area, usually ~/.cache/huggingface
-    # Ignored if repo_id points to a local directory.
-    use_hf_cache: false
-
-  # Note: I did most of my development & testing with my own quantized
-  # version, but it is probably equivalent to the one below,
-  # which I did briefly test to make sure it downloaded correctly.
+# Explanation for the fields (all required):
+#   name: The name as you want it to appear in the UI
+#   repo_id: The HF model ID. OR! Can be a path to a local directory.
+#       If a local directory, it should contain the usual JSON & safetensors
+#       files, i.e. from using "huggingface-cli download"
+#   use_hf_cache: If false, it will download to ComfyUI/models/LLM.
+#       Otherwise, the model will end up in your usual HF cache area, usually ~/.cache/huggingface
+#       Ignored if repo_id points to a local directory.
 
   - name: unsloth/Llama-3.2-11B-Vision-Instruct-bnb-4bit
     repo_id: unsloth/Llama-3.2-11B-Vision-Instruct-bnb-4bit
     use_hf_cache: false
 
-    # Never tried this one, it's quantized a bit differently: bnb_4bit_use_double_quant=false
+# FYI: I did most of my development & testing with my own quantized
+# version, but it is probably equivalent to the one above.
+# I did briefly test the above to make sure it downloaded & worked correctly.
+
+# Note: The following model is gated, so you have to be logged in via
+# "huggingface-cli login"
+# It's also unquantized, so you'll need around 22GB of VRAM or else it's going
+# to be very very slow.
+
+  - name: meta-llama/Llama-3.2-11B-Vision-Instruct
+    repo_id: meta-llama/Llama-3.2-11B-Vision-Instruct
+    use_hf_cache: false
+
+# Never tried this one, it's quantized a bit differently: bnb_4bit_use_double_quant=false
+
   - name: SeanScripts/Llama-3.2-11B-Vision-Instruct-nf4
     repo_id: SeanScripts/Llama-3.2-11B-Vision-Instruct-nf4
     use_hf_cache: false
