@@ -125,6 +125,7 @@ class LlamaVisionModel:
             # (or at least, does not complain)
             if k in ('temperature', 'top_p', 'top_k', 'min_p'):
                 gen_args[k] = v
+        # print(f'gen_args = {gen_args}')
 
         # https://huggingface.co/docs/transformers/main/en/main_classes/text_generation
         output = self.model.generate(
@@ -174,6 +175,59 @@ class LlamaVisionModelNode:
         llm = LlamaVisionModel(model_path)
 
         return (llm,)
+
+
+class LLMSamplerSettings:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            'required': {
+                'temperature': ('FLOAT', {
+                    'min': 0.0,
+                    'default': 0.6,
+                }),
+                'min_p': ('FLOAT', {
+                    'min': 0.0,
+                    'max': 1.0,
+                    'default': 0.0,
+                }),
+                'top_p': ('FLOAT', {
+                    'min': 0.0,
+                    'max': 1.0,
+                    'default': 0.9,
+                }),
+                'top_k': ('INT', {
+                    'min': 0,
+                    'default': 0,
+                }),
+            }
+        }
+
+    TITLE = 'LLM Sampler Settings'
+
+    RETURN_TYPES = ('LLMSAMPLER',)
+    RETURN_NAMES = ('llm_sampler',)
+
+    FUNCTION = 'execute'
+
+    CATEGORY = 'LlamaVision'
+
+    def execute(self, temperature, min_p, top_p, top_k):
+        samplers = []
+
+        # NB Fixed order, as there doesn't seem to be a way to set order in
+        # LlamaVision's generate function.
+        # top_k -> top_p -> min_p -> temperature as this is llama.cpp's
+        # default order, but I don't know if it makes sense...
+        if top_k > 0:
+            samplers.append(('top_k', top_k))
+        if top_p < 1.0:
+            samplers.append(('top_p', top_p))
+        if min_p > 0.0:
+            samplers.append(('min_p', min_p))
+        samplers.append(('temperature', temperature))
+
+        return (samplers,)
 
 
 class LlamaVisionChat:
@@ -240,4 +294,5 @@ class LlamaVisionChat:
 NODE_CLASS_MAPPINGS = {
     'LlamaVisionModel': LlamaVisionModelNode,
     'LlamaVisionChat': LlamaVisionChat,
+    'LLMSamplerSettings': LLMSamplerSettings,
 }

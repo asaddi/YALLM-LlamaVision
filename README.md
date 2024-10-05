@@ -6,7 +6,7 @@ A set of nodes for basic Llama 3.2 Vision support in ComfyUI. Give it an image a
 
 (The "Show Text" node is from https://github.com/pythongosssss/ComfyUI-Custom-Scripts/)
 
-For the moment, the LLM sampler nodes can be found in my https://github.com/asaddi/ComfyUI-YALLM-node project. They are completely optional and the defaults for the model will be used if there's nothing connected (usually this means: temperature 0.6, top-p 0.9).
+You can adjust the LLM sampler settings with the included "LLM Sampler Settings" node. However, this is completely optional and without it, the model's default settings will be used, which is usually: temperature 0.6, top-p 0.9. (See `generation_config.json` in the model's repo.)
 
 ## Installation
 
