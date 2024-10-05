@@ -5,7 +5,9 @@ version = "0.1.0"
 license = {file = "LICENSE.txt"}
 dependencies = [
   "transformers>=4.45.0",
-  "bitsandbytes"
+  "accelerate",
+  "bitsandbytes",
+  "pydantic"
 ]
 
 [project.urls]

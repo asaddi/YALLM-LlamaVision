@@ -1,2 +1,11 @@
 transformers>=4.45.0
+accelerate
 bitsandbytes
+pydantic
+
+# These should already be installed
+huggingface_hub
+pillow
+pyyaml
+torch
+torchvision
