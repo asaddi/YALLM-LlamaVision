@@ -4,79 +4,18 @@ from typing import Any
 
 from accelerate import cpu_offload_with_hook
 from accelerate.utils import set_seed
-from huggingface_hub import snapshot_download
 from PIL.Image import Image
-from pydantic import BaseModel
 import torch
 import torchvision.transforms.functional as F
 from transformers import MllamaForConditionalGeneration, AutoProcessor
-import yaml
+
+from .models import *
 
 # Not sure how to turn accelerate off, so can't do manual management like the rest of ComfyUI
 # from comfy.model_management import get_torch_device, unet_offload_device
-import folder_paths
 
 
-BASE_NAME = os.path.realpath(os.path.dirname(__file__))
-
-
-class LlamaVisionModelDefinition(BaseModel):
-    name: str
-    repo_id: str
-    use_hf_cache: bool
-
-
-class LlamaVisionModels:
-    LIST: list[LlamaVisionModelDefinition] = []
-    BY_NAME: dict[str,LlamaVisionModelDefinition] = {}
-    CHOICES: list[str] = []
-
-    def _get_models_file(self) -> str:
-        models_file = os.path.join(BASE_NAME, 'models.yaml')
-        if not os.path.exists(models_file):
-            models_file = os.path.join(BASE_NAME, 'models.yaml.default')
-        return models_file
-
-    def load(self):
-        models_file = self._get_models_file()
-
-        with open(models_file) as inp:
-            d = yaml.load(inp, yaml.Loader)
-        self._mtime = (models_file, os.path.getmtime(models_file))
-
-        self.LIST = []
-        for value in d['models']:
-            self.LIST.append(LlamaVisionModelDefinition.model_validate(value))
-        if not self.LIST:
-            raise RuntimeError('Need at least one model defined')
-        self.BY_NAME = { d.name: d for d in self.LIST }
-        self.CHOICES = [ d.name for d in self.LIST ]
-
-    def refresh(self):
-        models_file = self._get_models_file()
-        if self._mtime != (models_file, os.path.getmtime(models_file)):
-            self.load()
-
-    def download(self, name: str) -> str:
-        model_def = self.BY_NAME[name]
-
-        if os.path.exists(model_def.repo_id):
-            # Local path, nothing to do
-            return model_def.repo_id
-
-        allowed = ['*.json', '*.safetensors']
-
-        if model_def.use_hf_cache:
-            # Easy peasy
-            return snapshot_download(model_def.repo_id, allow_patterns=allowed)
-        else:
-            dir_name = '--'.join(model_def.repo_id.split('/'))
-            model_path = os.path.join(folder_paths.models_dir, 'LLM', dir_name)
-            os.makedirs(model_path, exist_ok=True)
-            return snapshot_download(model_def.repo_id, allow_patterns=allowed, local_dir=model_path)
-
-
-MODELS = LlamaVisionModels()
+MODELS = ModelManager()
 MODELS.load()
 
 
