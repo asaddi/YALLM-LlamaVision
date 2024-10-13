@@ -14,11 +14,11 @@ Clone into your `custom_nodes` directory and install the dependencies:
 
     path/to/ComfyUI/pip install -r YALLM-LlamaVision/requirements.txt
 
-This will upgrade your Huggingface `transformers` module to 4.45 or later, which is needed for Llama 3.2 Vision. It will also install the HF `bitsandbytes` package for running quantized (e.g. nf4) models.
+This will upgrade your Huggingface `transformers` module to 4.45 or later, which is needed for Llama 3.2 Vision. It will also install the HF `bitsandbytes` package for running quantized (e.g. "nf4") models.
 
 ## Models
 
-Out of the box, it uses the nf4 quantized model at https://huggingface.co/unsloth/Llama-3.2-11B-Vision-Instruct-bnb-4bit (for best results, you should probably have at least 10GB of VRAM).
+Out of the box, it uses the "nf4" quantized model at https://huggingface.co/unsloth/Llama-3.2-11B-Vision-Instruct-bnb-4bit (for best results, you should probably have at least 10GB of VRAM).
 
 Other options are available, including the original unquantized (BF16) version.
 
@@ -31,6 +31,12 @@ You can customize the model list by:
 and then editing `models.yaml` to taste.
 
 Also, no, I haven't tested it with 90B!
+
+### Quantization
+
+If you select the original model (`meta-llama/Llama-3.2-11B-Vision-Instruct`), can you also choose to quantize it on-the-fly. However, I don't really recommend this because you'll be loading in a 20GB model every time. If you're going to use "nf4", just use one of the pre-quantized models.
+
+Using "int8" quantization requires around 15 - 15.5GB of VRAM in my experience. But I also don't recommend using "int8" whether pre-quantized or quantized on-the-fly since, unlike "nf4" quantization, the model **cannot be offloaded after usage**. So you'll need a lot more than 16GB (like in the 24GB range) if you want to do more with your workflow. This is a limitation of `transformers` & `bitsandbytes`, and if there's a way around it, I haven't learned it yet. 😜
 
 ## License
 

@@ -1,18 +1,27 @@
 # Copyright (c) 2024 Allan Saddi <allan@saddi.com>
-import os
+from enum import Enum, auto
+import logging
 from typing import Any
 
 from accelerate import cpu_offload_with_hook
-from accelerate.utils import set_seed
 from PIL.Image import Image
 import torch
 import torchvision.transforms.functional as F
-from transformers import MllamaForConditionalGeneration, AutoProcessor
+from transformers import (
+    AutoProcessor,
+    BitsAndBytesConfig,
+    MllamaConfig,
+    MllamaForConditionalGeneration,
+    set_seed,
+)
 
 from .models import *
 
 # Not sure how to turn accelerate off, so can't do manual management like the rest of ComfyUI
 # from comfy.model_management import get_torch_device, unet_offload_device
+
+
+logger = logging.getLogger('LlamaVision')
 
 
 MODELS = ModelManager()
@@ -25,17 +34,81 @@ ChatHistory = list[ChatMessage]
 SamplerSetting = tuple[str,Any]
 
 
+class Quant(Enum):
+    DEFAULT = auto()
+    NF4 = auto()
+    INT8 = auto()
+
+
 class LlamaVisionModel:
-    def __init__(self, model_id: str):
-        # device = get_torch_device()
+    def __init__(self, model_id: str, quant: Quant=Quant.DEFAULT):
+        config = MllamaConfig.from_pretrained(model_id)
+
+        model_quant = Quant.DEFAULT
+        if (bnb_config := getattr(config, 'quantization_config', {})):
+            if bnb_config.get('quant_method') == 'bitsandbytes':
+                if bnb_config['load_in_4bit'] and bnb_config['bnb_4bit_quant_type'] == 'nf4':
+                    # TODO Should I bother with FP4? Do people use that?
+                    model_quant = Quant.NF4
+                elif bnb_config['load_in_8bit']:
+                    model_quant = Quant.INT8
+
+        # Default to whatever the model wants, otherwise bfloat16
+        dtype = config.torch_dtype
+        if dtype is None:
+            dtype = torch.bfloat16
+
+        quantization_config = None
+        # TODO Maybe don't bother if model_quant != Quant.DEFAULT?
+        if quant == Quant.NF4:
+            dtype = torch.bfloat16
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=False,
+                bnb_4bit_quant_type='nf4',
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+        elif quant == Quant.INT8:
+            dtype = torch.float16
+            quantization_config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_skip_modules=[
+                    'vision_model.patch_embedding',
+                    'vision_model.gated_positional_embedding',
+                    'vision_model.gated_positional_embedding.tile_embedding',
+                    'vision_model.pre_tile_positional_embedding',
+                    'vision_model.pre_tile_positional_embedding.embedding',
+                    'vision_model.post_tile_positional_embedding',
+                    'vision_model.post_tile_positional_embedding.embedding',
+                    'language_model.model.embed_tokens',
+                    'language_model.lm_head',
+                    # Apparently, it doesn't like this layer being quantized
+                    'multi_modal_projector'
+                    ],
+            )
+
+        logger.info(f'Loading model with dtype {dtype}')
+
         # https://huggingface.co/docs/transformers/main/en/model_doc/mllama#transformers.MllamaForConditionalGeneration
         self.model = MllamaForConditionalGeneration.from_pretrained(
             model_id,
-            torch_dtype=torch.bfloat16, # TODO should this be configurable?
-            device_map='auto', # Ugh... accelerate handles the model whether I specify this or not. Manual management not possible?!
-        )
+            torch_dtype=dtype,
+            device_map='auto',
+            quantization_config=quantization_config,
+        ).eval()
+
         # https://huggingface.co/docs/transformers/main/en/model_doc/mllama#transformers.MllamaProcessor
         self.processor = AutoProcessor.from_pretrained(model_id)
+
+        if model_quant == Quant.DEFAULT and quant != Quant.DEFAULT:
+            # Quantized on-the-fly
+            self.quant = quant
+        else:
+            # If the model is quantized, that overrides everything else
+            # It doesn't matter what we passed in via quantization_config
+            self.quant = model_quant
+
+        logger.info(f'Model loaded, quant = {self.quant}')
 
         self.hook = None # Create this lazily
 
@@ -66,12 +139,13 @@ class LlamaVisionModel:
                 gen_args[k] = v
         # print(f'gen_args = {gen_args}')
 
-        # https://huggingface.co/docs/transformers/main/en/main_classes/text_generation
-        output = self.model.generate(
-            **inputs,
-            max_new_tokens=2048, # TODO This should be configurable, I think?
-            **gen_args,
-        ).to(torch.device('cpu'))
+        with torch.no_grad():
+            # https://huggingface.co/docs/transformers/main/en/main_classes/text_generation
+            output = self.model.generate(
+                **inputs,
+                max_new_tokens=2048, # TODO This should be configurable, I think?
+                **gen_args,
+            )
 
         prompt_len = inputs.input_ids.shape[-1]
         generated_ids = output[:, prompt_len:] # Grab only the new tokens
@@ -83,6 +157,11 @@ class LlamaVisionModel:
         return result
 
     def offload(self):
+        if self.quant == Quant.INT8:
+            # Apparently you can't offload an int8 quant.
+            logger.info('Asked to offload model, but model is int8 -- ignoring')
+            return
+
         if self.hook is None:
             self.model, self.hook = cpu_offload_with_hook(self.model)
         else:
@@ -95,7 +174,8 @@ class LlamaVisionModelNode:
         MODELS.refresh()
         return {
             'required': {
-                'model': (MODELS.CHOICES,)
+                'model': (MODELS.CHOICES,),
+                'quantization': ([q.name.lower() for q in Quant],)
             }
         }
 
@@ -108,10 +188,12 @@ class LlamaVisionModelNode:
 
     CATEGORY = 'LlamaVision'
 
-    def execute(self, model: str):
+    def execute(self, model: str, quantization: str):
+        quant = Quant[quantization.upper()]
+
         model_path = MODELS.download(model)
         # print(f"Using model at {model_path}")
-        llm = LlamaVisionModel(model_path)
+        llm = LlamaVisionModel(model_path, quant=quant)
 
         return (llm,)
 
