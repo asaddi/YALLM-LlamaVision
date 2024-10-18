@@ -38,6 +38,11 @@ If you select the original model (`meta-llama/Llama-3.2-11B-Vision-Instruct`), c
 
 Using "int8" quantization requires around 15 - 15.5GB of VRAM in my experience. But I also don't recommend using "int8" whether pre-quantized or quantized on-the-fly since, unlike "nf4" quantization, the model **cannot be offloaded after usage**. So you'll need a lot more than 16GB (like in the 24GB range) if you want to do more with your workflow. This is a limitation of `transformers` & `bitsandbytes`, and if there's a way around it, I haven't learned it yet. 😜
 
+## My Related Projects ##
+
+* https://github.com/asaddi/ComfyUI-YALLM-node LLM ComfyUI nodes for local & remote LLMs served via OpenAI-like API. Multimodal support too, so you can talk to local or remote instances of vision LLMs.
+* https://github.com/asaddi/lv-serve Simple OpenAI-like API server for Llama 3.2 Vision. Pretty similar to this project, but hosts the model outside of ComfyUI. Combine with ComfyUI-YALLM-node and your workflow is then free to swap between local & remote APIs very easily.
+
 ## License
 
 Licensed under [BSD-2-Clause-Patent](https://opensource.org/license/bsdpluspatent).
