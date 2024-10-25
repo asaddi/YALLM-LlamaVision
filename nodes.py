@@ -34,6 +34,15 @@ ChatHistory = list[ChatMessage]
 SamplerSetting = tuple[str,Any]
 
 
+def has_image(messages: ChatHistory) -> bool:
+    for message in messages:
+        content = message['content']
+        if not isinstance(content, str): # plain text messages can't contain images
+            # check if any of the parts from a multi-modal message have an image
+            return any([x for x in content if x['type'] == 'image'])
+    return False
+
+
 class Quant(Enum):
     DEFAULT = auto()
     NF4 = auto()
@@ -117,6 +126,21 @@ class LlamaVisionModel:
                         offload: bool=True) -> str:
         if samplers is None:
             samplers = []
+
+        if image is not None and not has_image(messages):
+            # Work backwards through history
+            for msg in reversed(messages):
+                # And grab the very last user message we see
+                if msg.get('role') == 'user':
+                    parts = msg.get('content', [])
+                    if isinstance(parts, str):
+                        parts = [{'type': 'text', 'text': parts}]
+
+                    # And insert image placeholder just before the user prompt
+                    parts.insert(0, { 'type': 'image' })
+
+                    msg['content'] = parts
+                    break
 
         input_text = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(
