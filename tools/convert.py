@@ -9,17 +9,18 @@ q_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_compute_dtype=torch.bfloat16,
     bnb_4bit_use_double_quant=False,
-    bnb_4bit_quant_type='nf4')
+    bnb_4bit_quant_type="nf4",
+)
 
 model = MllamaForConditionalGeneration.from_pretrained(
     model_id,
     torch_dtype=torch.bfloat16,
-    device_map='auto',
+    device_map="auto",
     quantization_config=q_config,
 )
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-dest = 'Llama-3.2-11B-Vision-Instruct-nf4'
+dest = "Llama-3.2-11B-Vision-Instruct-nf4"
 
 # AFAIK, the model needs to reside on a single device before you save it
 # However, moving it gets you a complaint from the accelerate module
