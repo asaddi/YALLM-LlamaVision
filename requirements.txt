@@ -1,4 +1,4 @@
-transformers>=4.45.0
+transformers>=4.46.0
 accelerate
 bitsandbytes
 pydantic

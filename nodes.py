@@ -107,6 +107,7 @@ class LlamaVisionModel:
             torch_dtype=dtype,
             device_map="auto",
             quantization_config=quantization_config,
+            attn_implementation="sdpa",
         ).eval()
 
         # https://huggingface.co/docs/transformers/main/en/model_doc/mllama#transformers.MllamaProcessor
